@@ -5,8 +5,8 @@ import './styles.css';
 
 const CONTROL_SIZE = 96;
 const ROUND_MS = 3000;
-const MIN_WINNERS = 1;
-const MAX_WINNERS = 10;
+const FINGER_SELECTION_BOUNDS = { min: 1, max: 10 };
+const GROUP_SELECTION_BOUNDS = { min: 2, max: 5 };
 const NUMBER_STEP_DISTANCE = 78;
 const MODE_TOGGLE_DISTANCE = 84;
 const MODE_TOGGLE_HYSTERESIS = 22;
@@ -15,6 +15,15 @@ const FINGER_COLORS = ['#f97316', '#22c55e', '#38bdf8', '#e879f9', '#fde047', '#
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function selectionBounds(mode) {
+  return mode === 'G' ? GROUP_SELECTION_BOUNDS : FINGER_SELECTION_BOUNDS;
+}
+
+function clampSelectionCount(value, mode) {
+  const { min, max } = selectionBounds(mode);
+  return clamp(value, min, max);
 }
 
 function isTopLeft(point) {
@@ -54,7 +63,7 @@ function createGroups(items, groupCount) {
 function nextFingerLabel(fingers) {
   const used = new Set(fingers.map((finger) => finger.label).filter(Boolean));
 
-  for (let label = 1; label <= MAX_WINNERS + 10; label += 1) {
+  for (let label = 1; label <= FINGER_SELECTION_BOUNDS.max + 10; label += 1) {
     if (!used.has(label)) {
       return label;
     }
@@ -76,7 +85,6 @@ function App() {
   const controlPointerId = useRef(null);
   const startAdjustX = useRef(0);
   const startAdjustY = useRef(0);
-  const startWinnerCount = useRef(1);
   const startMode = useRef('F');
   const toggledThisDrag = useRef(false);
   const selectionRef = useRef(null);
@@ -204,10 +212,9 @@ function App() {
       controlPointerId.current = event.pointerId;
       startAdjustX.current = event.clientX;
       startAdjustY.current = event.clientY;
-      startWinnerCount.current = MIN_WINNERS;
       startMode.current = mode;
       toggledThisDrag.current = false;
-      setWinnerCount(MIN_WINNERS);
+      setWinnerCount(selectionBounds(mode).min);
       setAdjusting(true);
       updateFinger(event, 'control');
       return;
@@ -221,12 +228,16 @@ function App() {
     if (event.pointerId === controlPointerId.current) {
       const horizontalDistance = Math.max(0, event.clientX - startAdjustX.current);
       const distance = Math.max(0, event.clientY - startAdjustY.current);
-      const count = clamp(startWinnerCount.current + Math.floor(distance / NUMBER_STEP_DISTANCE), MIN_WINNERS, MAX_WINNERS);
       const shouldToggle = horizontalDistance >= MODE_TOGGLE_DISTANCE && horizontalDistance > distance * 0.8;
       const shouldReleaseToggle = horizontalDistance < MODE_TOGGLE_DISTANCE - MODE_TOGGLE_HYSTERESIS;
+      const toggledMode = startMode.current === 'F' ? 'G' : 'F';
+      const nextMode =
+        (shouldToggle || toggledThisDrag.current) && !shouldReleaseToggle ? toggledMode : startMode.current;
+      const count = clampSelectionCount(selectionBounds(nextMode).min + Math.floor(distance / NUMBER_STEP_DISTANCE), nextMode);
+
       setWinnerCount(count);
       if (shouldToggle && !toggledThisDrag.current) {
-        setMode(startMode.current === 'F' ? 'G' : 'F');
+        setMode(nextMode);
         toggledThisDrag.current = true;
       } else if (shouldReleaseToggle && toggledThisDrag.current) {
         setMode(startMode.current);
@@ -371,7 +382,7 @@ function App() {
             <p>Place fingers on the open screen. Rings pulse while everyone is touching.</p>
             <p>With F mode, the app randomly leaves the chosen finger numbers after three seconds.</p>
             <p>With G mode, everyone is split into random, even groups shown by color.</p>
-            <p>Press the green dot to reset to 1. Drag it down to increase the number, or right to switch between F and G.</p>
+            <p>Press the control dot to reset the count. Drag it down to increase the number, or right to switch between F and G.</p>
             <p>PickMe supports up to 10 fingers, but your phone or browser may detect fewer simultaneous touches.</p>
           </div>
         </section>

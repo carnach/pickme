@@ -27,12 +27,12 @@ PickMe has two modes:
 
 The green or blue control dot in the top-left controls the current selection:
 
-- Press it to reset the number to `1`.
+- Press it to reset the number to the current mode minimum.
 - Drag it downward to increase the number.
 - Drag it to the right to toggle between `F` and `G`.
 - Release it and the dot snaps back into place.
 
-The dot is green in `F` mode and blue in `G` mode. The orange dot in the top-right opens the help screen.
+The dot is green in `F` mode and blue in `G` mode. `F` mode supports selecting 1 to 10 fingers, and `G` mode supports 2 to 5 groups. The orange dot in the top-right opens the help screen.
 
 ## Selection Logic
 
@@ -47,7 +47,7 @@ When at least two fingers are touching the screen, a three-second timer starts. 
 
 In `F` mode, PickMe shuffles the active fingers and chooses the configured number of winners. If the requested number is greater than the available fingers, all fingers are selected.
 
-In `G` mode, PickMe shuffles the active fingers and distributes them across the configured number of groups in round-robin order. This keeps group sizes as even as possible while still being random.
+In `G` mode, PickMe shuffles the active fingers and distributes them across the configured number of groups in round-robin order. Group selection is limited to 2 to 5 groups so each group can have at least two fingers when 10 fingers are active. This keeps group sizes as even as possible while still being random.
 
 ## Touch Limitations
 
