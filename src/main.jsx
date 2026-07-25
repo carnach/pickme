@@ -191,32 +191,45 @@ function App() {
 
   const handleHelpPointerDown = (event) => {
     event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
     helpSwipeStart.current = {
       x: event.clientX,
       y: event.clientY,
     };
   };
 
-  const handleHelpPointerUp = (event) => {
-    event.stopPropagation();
-
+  const navigateHelpFromSwipe = (event) => {
     if (!helpSwipeStart.current) {
-      return;
+      return false;
     }
 
     const horizontalDistance = event.clientX - helpSwipeStart.current.x;
     const verticalDistance = event.clientY - helpSwipeStart.current.y;
-    helpSwipeStart.current = null;
 
     if (Math.abs(horizontalDistance) < 56 || Math.abs(horizontalDistance) < Math.abs(verticalDistance) * 1.25) {
-      return;
+      return false;
     }
+
+    helpSwipeStart.current = null;
 
     if (horizontalDistance < 0 && helpPage === 'instructions') {
       setHelpPage('install');
     } else if (horizontalDistance > 0 && helpPage === 'install') {
       setHelpPage('instructions');
     }
+
+    return true;
+  };
+
+  const handleHelpPointerMove = (event) => {
+    event.stopPropagation();
+    navigateHelpFromSwipe(event);
+  };
+
+  const handleHelpPointerUp = (event) => {
+    event.stopPropagation();
+    navigateHelpFromSwipe(event);
+    helpSwipeStart.current = null;
   };
 
   const handleHelpPointerCancel = (event) => {
@@ -450,7 +463,7 @@ function App() {
           role="dialog"
           aria-label={helpPage === 'instructions' ? 'PickMe help' : 'Save PickMe to your Home Screen'}
           onPointerDown={handleHelpPointerDown}
-          onPointerMove={(event) => event.stopPropagation()}
+          onPointerMove={handleHelpPointerMove}
           onPointerUp={handleHelpPointerUp}
           onPointerCancel={handleHelpPointerCancel}
         >
@@ -492,10 +505,6 @@ function App() {
                   </div>
                 )}
 
-                <button className="help-page-cue" type="button" onClick={() => setHelpPage('install')}>
-                  <span>Home Screen help</span>
-                  <span aria-hidden="true">Swipe left&nbsp; ←</span>
-                </button>
               </div>
             )}
 
@@ -526,12 +535,21 @@ function App() {
                   </ol>
                 </section>
 
-                <button className="help-page-cue help-page-cue-back" type="button" onClick={() => setHelpPage('instructions')}>
-                  <span>Back to PickMe help</span>
-                  <span aria-hidden="true">Swipe right&nbsp; →</span>
-                </button>
               </div>
             )}
+
+            <button
+              className="help-page-cue"
+              type="button"
+              onClick={() => setHelpPage(helpPage === 'instructions' ? 'install' : 'instructions')}
+              aria-label={helpPage === 'instructions' ? 'Open Home Screen help' : 'Back to PickMe help'}
+            >
+              <span>{helpPage === 'instructions' ? 'Home Screen help' : 'Back to PickMe help'}</span>
+              <span className="help-pagination" aria-hidden="true">
+                <span className="help-pagination-dot" data-active={helpPage === 'instructions'} />
+                <span className="help-pagination-dot" data-active={helpPage === 'install'} />
+              </span>
+            </button>
           </div>
         </section>
       )}

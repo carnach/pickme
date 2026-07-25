@@ -213,11 +213,13 @@ button {
 
 .help-panel {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100%, 520px);
   max-height: calc(100dvh - 36px);
   margin: 0 auto;
   padding: 24px;
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   border: 1px solid rgba(248, 250, 252, 0.16);
   border-radius: 8px;
@@ -245,6 +247,8 @@ button {
 }
 
 .help-page {
+  min-height: 0;
+  overflow-y: auto;
   animation: help-page-in 180ms ease-out;
 }
 
@@ -256,6 +260,7 @@ button {
 }
 
 .help-page-cue {
+  flex: none;
   display: flex;
   justify-content: space-between;
   width: 100%;
@@ -270,6 +275,26 @@ button {
 
 .help-page-cue span:last-child {
   color: #475569;
+}
+
+.help-pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.help-pagination-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #94a3b8;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.help-pagination-dot[data-active='true'] {
+  border-color: #334155;
+  background: #334155;
 }
 
 .install-page > h1 {
