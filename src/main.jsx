@@ -79,6 +79,7 @@ function App() {
   const [winnerCount, setWinnerCount] = useState(1);
   const [mode, setMode] = useState('F');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpPage, setHelpPage] = useState('instructions');
   const [shareOpen, setShareOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -93,6 +94,7 @@ function App() {
   const startMode = useRef('F');
   const toggledThisDrag = useRef(false);
   const selectionRef = useRef(null);
+  const helpSwipeStart = useRef(null);
 
   const activeFingers = useMemo(() => fingers.filter((finger) => finger.kind === 'pick'), [fingers]);
   const progress = roundStartedAt && activeFingers.length > 1 ? clamp((now - roundStartedAt) / ROUND_MS, 0, 1) : 0;
@@ -174,11 +176,52 @@ function App() {
     setSelection(null);
   };
 
+  const openHelp = () => {
+    setHelpPage('instructions');
+    setHelpOpen(true);
+  };
+
   const closeHelp = () => {
     setHelpOpen(false);
+    setHelpPage('instructions');
     setShareOpen(false);
     setQrDataUrl(null);
     setCopied(false);
+  };
+
+  const handleHelpPointerDown = (event) => {
+    event.stopPropagation();
+    helpSwipeStart.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+  };
+
+  const handleHelpPointerUp = (event) => {
+    event.stopPropagation();
+
+    if (!helpSwipeStart.current) {
+      return;
+    }
+
+    const horizontalDistance = event.clientX - helpSwipeStart.current.x;
+    const verticalDistance = event.clientY - helpSwipeStart.current.y;
+    helpSwipeStart.current = null;
+
+    if (Math.abs(horizontalDistance) < 56 || Math.abs(horizontalDistance) < Math.abs(verticalDistance) * 1.25) {
+      return;
+    }
+
+    if (horizontalDistance < 0 && helpPage === 'instructions') {
+      setHelpPage('install');
+    } else if (horizontalDistance > 0 && helpPage === 'install') {
+      setHelpPage('instructions');
+    }
+  };
+
+  const handleHelpPointerCancel = (event) => {
+    event.stopPropagation();
+    helpSwipeStart.current = null;
   };
 
   const copyAppUrl = async () => {
@@ -239,7 +282,7 @@ function App() {
     }
 
     if (isTopRight(event)) {
-      setHelpOpen(true);
+      openHelp();
       updateFinger(event, 'control');
       return;
     }
@@ -325,7 +368,7 @@ function App() {
       >
         <span>{winnerCount}{mode}</span>
       </div>
-      <button className="corner corner-right help-dot" type="button" onClick={() => setHelpOpen(true)} aria-label="Open help">
+      <button className="corner corner-right help-dot" type="button" onClick={openHelp} aria-label="Open help">
         ?
       </button>
 
@@ -405,43 +448,88 @@ function App() {
           className="help"
           aria-modal="true"
           role="dialog"
-          onPointerDown={(event) => event.stopPropagation()}
+          aria-label={helpPage === 'instructions' ? 'PickMe help' : 'Save PickMe to your Home Screen'}
+          onPointerDown={handleHelpPointerDown}
           onPointerMove={(event) => event.stopPropagation()}
-          onPointerUp={(event) => event.stopPropagation()}
-          onPointerCancel={(event) => event.stopPropagation()}
+          onPointerUp={handleHelpPointerUp}
+          onPointerCancel={handleHelpPointerCancel}
         >
           <div className="help-panel">
             <button className="close" type="button" onClick={closeHelp} aria-label="Close help">
               ×
             </button>
-            <h1 className="help-title">
-              <span>PickMe</span>
-              <img src="/icons/monkey-union-jack.svg" alt="Monkey" />
-            </h1>
-            <p>Place fingers on the open screen. Rings pulse while everyone is touching.</p>
-            <p>With F mode, the app randomly leaves the chosen finger numbers after three seconds.</p>
-            <p>With G mode, everyone is split into random, even groups shown by color.</p>
-            <p>Press the control dot to reset the count. Drag it down to increase the number, or right to switch between F and G.</p>
-            <p>PickMe supports up to 10 fingers, but your phone or browser may detect fewer simultaneous touches.</p>
 
-            {!shareOpen && (
-              <button className="share-toggle" type="button" onClick={() => setShareOpen(true)}>
-                Share PickMe
-              </button>
+            {helpPage === 'instructions' && (
+              <div className="help-page">
+                <h1 className="help-title">
+                  <span>PickMe</span>
+                  <img src="/icons/monkey-union-jack.svg" alt="Monkey" />
+                </h1>
+                <p>Place fingers on the open screen. Rings pulse while everyone is touching.</p>
+                <p>With F mode, the app randomly leaves the chosen finger numbers after three seconds.</p>
+                <p>With G mode, everyone is split into random, even groups shown by color.</p>
+                <p>Press the control dot to reset the count. Drag it down to increase the number, or right to switch between F and G.</p>
+                <p>PickMe supports up to 10 fingers, but your phone or browser may detect fewer simultaneous touches.</p>
+
+                {!shareOpen && (
+                  <button className="share-toggle" type="button" onClick={() => setShareOpen(true)}>
+                    Share PickMe
+                  </button>
+                )}
+
+                {shareOpen && (
+                  <div className="share-panel">
+                    <p className="share-url">{APP_URL}</p>
+                    <div className="share-actions">
+                      <button className="share-action" type="button" onClick={copyAppUrl}>
+                        {copied ? 'Copied!' : 'Copy link'}
+                      </button>
+                      <button className="share-action" type="button" onClick={toggleQrCode}>
+                        {qrDataUrl ? 'Hide QR code' : 'Show QR code'}
+                      </button>
+                    </div>
+                    {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code for the PickMe app URL" />}
+                  </div>
+                )}
+
+                <button className="help-page-cue" type="button" onClick={() => setHelpPage('install')}>
+                  <span>Home Screen help</span>
+                  <span aria-hidden="true">Swipe left&nbsp; ←</span>
+                </button>
+              </div>
             )}
 
-            {shareOpen && (
-              <div className="share-panel">
-                <p className="share-url">{APP_URL}</p>
-                <div className="share-actions">
-                  <button className="share-action" type="button" onClick={copyAppUrl}>
-                    {copied ? 'Copied!' : 'Copy link'}
-                  </button>
-                  <button className="share-action" type="button" onClick={toggleQrCode}>
-                    {qrDataUrl ? 'Hide QR code' : 'Show QR code'}
-                  </button>
-                </div>
-                {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code for the PickMe app URL" />}
+            {helpPage === 'install' && (
+              <div className="help-page install-page">
+                <h1>Save to your Home Screen</h1>
+                <p className="install-intro">
+                  PickMe will appear alongside your other apps and open in its own window.
+                </p>
+
+                <section className="install-guide" aria-labelledby="ios-install-title">
+                  <h2 id="ios-install-title">iPhone or iPad</h2>
+                  <ol>
+                    <li>Open <strong>pickme.mnky.uk</strong> in Safari.</li>
+                    <li>Tap Share—the square with an upward arrow. If it is hidden, tap More (…) and then Share.</li>
+                    <li>Scroll down and tap <strong>Add to Home Screen</strong>. If it is missing, tap Edit Actions and add it.</li>
+                    <li>Turn on <strong>Open as Web App</strong>, then tap <strong>Add</strong>.</li>
+                  </ol>
+                </section>
+
+                <section className="install-guide" aria-labelledby="android-install-title">
+                  <h2 id="android-install-title">Android</h2>
+                  <ol>
+                    <li>Open <strong>pickme.mnky.uk</strong> in Chrome.</li>
+                    <li>Tap More (⋮) beside the address bar.</li>
+                    <li>Tap <strong>Add to home screen</strong>, then <strong>Install</strong>.</li>
+                    <li>Follow the instructions. PickMe will then appear on your Home Screen.</li>
+                  </ol>
+                </section>
+
+                <button className="help-page-cue help-page-cue-back" type="button" onClick={() => setHelpPage('instructions')}>
+                  <span>Back to PickMe help</span>
+                  <span aria-hidden="true">Swipe right&nbsp; →</span>
+                </button>
               </div>
             )}
           </div>

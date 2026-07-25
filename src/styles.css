@@ -23,7 +23,6 @@ body,
 }
 
 body {
-  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -41,6 +40,11 @@ button {
     radial-gradient(circle at 18% 18%, rgba(245, 158, 11, 0.16), transparent 30%),
     linear-gradient(145deg, #111827 0%, #182235 52%, #10151f 100%);
   cursor: crosshair;
+  touch-action: none;
+}
+
+.app:has(.help) {
+  touch-action: pan-y;
 }
 
 .corner {
@@ -210,13 +214,17 @@ button {
 .help-panel {
   position: relative;
   width: min(100%, 520px);
+  max-height: calc(100dvh - 36px);
   margin: 0 auto;
   padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(248, 250, 252, 0.16);
   border-radius: 8px;
   background: #f8fafc;
   color: #111827;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
+  touch-action: pan-y;
 }
 
 .help-panel h1 {
@@ -236,11 +244,65 @@ button {
   height: 42px;
 }
 
+.help-page {
+  animation: help-page-in 180ms ease-out;
+}
+
 .help-panel p {
   margin: 12px 0 0;
   color: #334155;
   font-size: 17px;
   line-height: 1.45;
+}
+
+.help-page-cue {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin: 18px 0 -8px;
+  padding: 10px 2px 2px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.help-page-cue span:last-child {
+  color: #475569;
+}
+
+.install-page > h1 {
+  max-width: calc(100% - 48px);
+  margin-bottom: 4px;
+  font-size: 26px;
+}
+
+.help-panel .install-intro {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.install-guide {
+  margin-top: 20px;
+}
+
+.install-guide h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.install-guide ol {
+  margin: 9px 0 0;
+  padding-left: 23px;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.install-guide li + li {
+  margin-top: 7px;
 }
 
 .share-toggle {
@@ -311,6 +373,18 @@ button {
   color: #0f172a;
   font-size: 28px;
   line-height: 1;
+}
+
+@keyframes help-page-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes pulse {
