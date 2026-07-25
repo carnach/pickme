@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { createRoot } from 'react-dom/client';
+import { toDataURL as qrToDataURL } from 'qrcode';
 import './styles.css';
 
+const APP_URL = 'https://pickme.mnky.uk/';
 const CONTROL_SIZE = 96;
 const ROUND_MS = 3000;
 const FINGER_SELECTION_BOUNDS = { min: 1, max: 10 };
@@ -77,6 +79,9 @@ function App() {
   const [winnerCount, setWinnerCount] = useState(1);
   const [mode, setMode] = useState('F');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState(null);
+  const [copied, setCopied] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   const [selection, setSelection] = useState(null);
   const [controlOffset, setControlOffset] = useState({ x: 0, y: 0 });
@@ -167,6 +172,37 @@ function App() {
     setFingers([]);
     setRoundStartedAt(null);
     setSelection(null);
+  };
+
+  const closeHelp = () => {
+    setHelpOpen(false);
+    setShareOpen(false);
+    setQrDataUrl(null);
+    setCopied(false);
+  };
+
+  const copyAppUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(APP_URL);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const toggleQrCode = async () => {
+    if (qrDataUrl) {
+      setQrDataUrl(null);
+      return;
+    }
+
+    try {
+      const dataUrl = await qrToDataURL(APP_URL, { margin: 1, width: 220 });
+      setQrDataUrl(dataUrl);
+    } catch {
+      setQrDataUrl(null);
+    }
   };
 
   const updateFinger = (event, kind) => {
@@ -375,7 +411,7 @@ function App() {
           onPointerCancel={(event) => event.stopPropagation()}
         >
           <div className="help-panel">
-            <button className="close" type="button" onClick={() => setHelpOpen(false)} aria-label="Close help">
+            <button className="close" type="button" onClick={closeHelp} aria-label="Close help">
               ×
             </button>
             <h1>PickMe</h1>
@@ -384,6 +420,27 @@ function App() {
             <p>With G mode, everyone is split into random, even groups shown by color.</p>
             <p>Press the control dot to reset the count. Drag it down to increase the number, or right to switch between F and G.</p>
             <p>PickMe supports up to 10 fingers, but your phone or browser may detect fewer simultaneous touches.</p>
+
+            {!shareOpen && (
+              <button className="share-toggle" type="button" onClick={() => setShareOpen(true)}>
+                Share PickMe
+              </button>
+            )}
+
+            {shareOpen && (
+              <div className="share-panel">
+                <p className="share-url">{APP_URL}</p>
+                <div className="share-actions">
+                  <button className="share-action" type="button" onClick={copyAppUrl}>
+                    {copied ? 'Copied!' : 'Copy link'}
+                  </button>
+                  <button className="share-action" type="button" onClick={toggleQrCode}>
+                    {qrDataUrl ? 'Hide QR code' : 'Show QR code'}
+                  </button>
+                </div>
+                {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code for the PickMe app URL" />}
+              </div>
+            )}
           </div>
         </section>
       )}
