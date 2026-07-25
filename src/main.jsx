@@ -414,7 +414,10 @@ function App() {
             <button className="close" type="button" onClick={closeHelp} aria-label="Close help">
               ×
             </button>
-            <h1>PickMe</h1>
+            <h1 className="help-title">
+              <span>PickMe</span>
+              <img src="/icons/monkey-union-jack.svg" alt="Monkey" />
+            </h1>
             <p>Place fingers on the open screen. Rings pulse while everyone is touching.</p>
             <p>With F mode, the app randomly leaves the chosen finger numbers after three seconds.</p>
             <p>With G mode, everyone is split into random, even groups shown by color.</p>

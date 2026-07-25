@@ -225,6 +225,17 @@ button {
   letter-spacing: 0;
 }
 
+.help-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-title img {
+  width: 42px;
+  height: 42px;
+}
+
 .help-panel p {
   margin: 12px 0 0;
   color: #334155;
