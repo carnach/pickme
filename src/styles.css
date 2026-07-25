@@ -246,10 +246,26 @@ button {
   height: 42px;
 }
 
+.help-pages {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .help-page {
+  grid-area: 1 / 1;
   min-height: 0;
   overflow-y: auto;
-  animation: help-page-in 180ms ease-out;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.help-page[data-active='true'] {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .help-panel p {
@@ -398,18 +414,6 @@ button {
   color: #0f172a;
   font-size: 28px;
   line-height: 1;
-}
-
-@keyframes help-page-in {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 @keyframes pulse {

@@ -472,8 +472,12 @@ function App() {
               ×
             </button>
 
-            {helpPage === 'instructions' && (
-              <div className="help-page">
+            <div className="help-pages">
+              <div
+                className="help-page"
+                data-active={helpPage === 'instructions'}
+                aria-hidden={helpPage !== 'instructions'}
+              >
                 <h1 className="help-title">
                   <span>PickMe</span>
                   <img src="/icons/monkey-union-jack.svg" alt="Monkey" />
@@ -504,12 +508,13 @@ function App() {
                     {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code for the PickMe app URL" />}
                   </div>
                 )}
-
               </div>
-            )}
 
-            {helpPage === 'install' && (
-              <div className="help-page install-page">
+              <div
+                className="help-page install-page"
+                data-active={helpPage === 'install'}
+                aria-hidden={helpPage !== 'install'}
+              >
                 <h1>Save to your Home Screen</h1>
                 <p className="install-intro">
                   PickMe will appear alongside your other apps and open in its own window.
@@ -534,9 +539,8 @@ function App() {
                     <li>Follow the instructions. PickMe will then appear on your Home Screen.</li>
                   </ol>
                 </section>
-
               </div>
-            )}
+            </div>
 
             <button
               className="help-page-cue"
