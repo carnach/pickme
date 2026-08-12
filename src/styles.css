@@ -346,42 +346,23 @@ button {
   margin-top: 7px;
 }
 
-.share-toggle {
-  margin: 20px 0 0;
-  padding: 12px 16px;
-  width: 100%;
-  border: 1px solid rgba(15, 23, 42, 0.16);
-  border-radius: 8px;
-  background: #e2e8f0;
-  color: #0f172a;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.share-panel {
-  margin: 20px 0 0;
-  padding: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 8px;
-  background: #eef2f7;
+.share-page > h1 {
+  margin-bottom: 4px;
+  font-size: 26px;
 }
 
 .share-url {
-  margin: 0;
+  margin: 6px 0 0;
   overflow-wrap: anywhere;
   color: #0f172a;
   font-size: 16px;
   font-weight: 700;
 }
 
-.share-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-}
-
 .share-action {
-  flex: 1;
+  display: block;
+  width: 100%;
+  margin-top: 20px;
   padding: 10px 12px;
   border: 0;
   border-radius: 8px;
@@ -395,7 +376,7 @@ button {
   display: block;
   width: 160px;
   height: 160px;
-  margin: 16px auto 0;
+  margin: 20px auto 0;
   border-radius: 8px;
   background: #f8fafc;
 }

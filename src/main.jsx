@@ -14,6 +14,17 @@ const MODE_TOGGLE_DISTANCE = 84;
 const MODE_TOGGLE_HYSTERESIS = 22;
 const GROUP_COLORS = ['#22c55e', '#f97316', '#38bdf8', '#e879f9', '#fde047', '#a78bfa', '#fb7185', '#14b8a6'];
 const FINGER_COLORS = ['#f97316', '#22c55e', '#38bdf8', '#e879f9', '#fde047', '#a78bfa', '#fb7185', '#14b8a6', '#f43f5e', '#84cc16'];
+const HELP_PAGE_ORDER = ['share', 'instructions', 'install'];
+const HELP_PAGE_LABEL = {
+  share: 'Share PickMe',
+  instructions: 'Back to PickMe help',
+  install: 'Home Screen help',
+};
+const HELP_DIALOG_LABEL = {
+  share: 'Share PickMe',
+  instructions: 'PickMe help',
+  install: 'Save PickMe to your Home Screen',
+};
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -80,7 +91,6 @@ function App() {
   const [mode, setMode] = useState('F');
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpPage, setHelpPage] = useState('instructions');
-  const [shareOpen, setShareOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [copied, setCopied] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
@@ -98,6 +108,7 @@ function App() {
 
   const activeFingers = useMemo(() => fingers.filter((finger) => finger.kind === 'pick'), [fingers]);
   const progress = roundStartedAt && activeFingers.length > 1 ? clamp((now - roundStartedAt) / ROUND_MS, 0, 1) : 0;
+  const nextHelpPage = HELP_PAGE_ORDER[(HELP_PAGE_ORDER.indexOf(helpPage) + 1) % HELP_PAGE_ORDER.length];
 
   useEffect(() => {
     selectionRef.current = selection;
@@ -170,6 +181,22 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    qrToDataURL(APP_URL, { margin: 1, width: 220 })
+      .then((dataUrl) => {
+        if (!cancelled) {
+          setQrDataUrl(dataUrl);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const resetRound = () => {
     setFingers([]);
     setRoundStartedAt(null);
@@ -184,8 +211,6 @@ function App() {
   const closeHelp = () => {
     setHelpOpen(false);
     setHelpPage('instructions');
-    setShareOpen(false);
-    setQrDataUrl(null);
     setCopied(false);
   };
 
@@ -212,11 +237,14 @@ function App() {
 
     helpSwipeStart.current = null;
 
-    if (horizontalDistance < 0 && helpPage === 'instructions') {
-      setHelpPage('install');
-    } else if (horizontalDistance > 0 && helpPage === 'install') {
-      setHelpPage('instructions');
+    const currentIndex = HELP_PAGE_ORDER.indexOf(helpPage);
+    const nextIndex = horizontalDistance < 0 ? currentIndex + 1 : currentIndex - 1;
+
+    if (nextIndex < 0 || nextIndex >= HELP_PAGE_ORDER.length) {
+      return false;
     }
+
+    setHelpPage(HELP_PAGE_ORDER[nextIndex]);
 
     return true;
   };
@@ -244,20 +272,6 @@ function App() {
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
-    }
-  };
-
-  const toggleQrCode = async () => {
-    if (qrDataUrl) {
-      setQrDataUrl(null);
-      return;
-    }
-
-    try {
-      const dataUrl = await qrToDataURL(APP_URL, { margin: 1, width: 220 });
-      setQrDataUrl(dataUrl);
-    } catch {
-      setQrDataUrl(null);
     }
   };
 
@@ -461,7 +475,7 @@ function App() {
           className="help"
           aria-modal="true"
           role="dialog"
-          aria-label={helpPage === 'instructions' ? 'PickMe help' : 'Save PickMe to your Home Screen'}
+          aria-label={HELP_DIALOG_LABEL[helpPage]}
           onPointerDown={handleHelpPointerDown}
           onPointerMove={handleHelpPointerMove}
           onPointerUp={handleHelpPointerUp}
@@ -473,6 +487,15 @@ function App() {
             </button>
 
             <div className="help-pages">
+              <div className="help-page share-page" data-active={helpPage === 'share'} aria-hidden={helpPage !== 'share'}>
+                <h1>Share PickMe</h1>
+                <p className="share-url">{APP_URL}</p>
+                {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code for the PickMe app URL" />}
+                <button className="share-action" type="button" onClick={copyAppUrl}>
+                  {copied ? 'Copied!' : 'Copy link'}
+                </button>
+              </div>
+
               <div
                 className="help-page"
                 data-active={helpPage === 'instructions'}
@@ -487,27 +510,6 @@ function App() {
                 <p>With G mode, everyone is split into random, even groups shown by color.</p>
                 <p>Press the control dot to reset the count. Drag it down to increase the number, or right to switch between F and G.</p>
                 <p>PickMe supports up to 10 fingers, but your phone or browser may detect fewer simultaneous touches.</p>
-
-                {!shareOpen && (
-                  <button className="share-toggle" type="button" onClick={() => setShareOpen(true)}>
-                    Share PickMe
-                  </button>
-                )}
-
-                {shareOpen && (
-                  <div className="share-panel">
-                    <p className="share-url">{APP_URL}</p>
-                    <div className="share-actions">
-                      <button className="share-action" type="button" onClick={copyAppUrl}>
-                        {copied ? 'Copied!' : 'Copy link'}
-                      </button>
-                      <button className="share-action" type="button" onClick={toggleQrCode}>
-                        {qrDataUrl ? 'Hide QR code' : 'Show QR code'}
-                      </button>
-                    </div>
-                    {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code for the PickMe app URL" />}
-                  </div>
-                )}
               </div>
 
               <div
@@ -545,13 +547,14 @@ function App() {
             <button
               className="help-page-cue"
               type="button"
-              onClick={() => setHelpPage(helpPage === 'instructions' ? 'install' : 'instructions')}
-              aria-label={helpPage === 'instructions' ? 'Open Home Screen help' : 'Back to PickMe help'}
+              onClick={() => setHelpPage(nextHelpPage)}
+              aria-label={nextHelpPage === 'instructions' ? 'Back to PickMe help' : `Open ${HELP_PAGE_LABEL[nextHelpPage]}`}
             >
-              <span>{helpPage === 'instructions' ? 'Home Screen help' : 'Back to PickMe help'}</span>
+              <span>{HELP_PAGE_LABEL[nextHelpPage]}</span>
               <span className="help-pagination" aria-hidden="true">
-                <span className="help-pagination-dot" data-active={helpPage === 'instructions'} />
-                <span className="help-pagination-dot" data-active={helpPage === 'install'} />
+                {HELP_PAGE_ORDER.map((page) => (
+                  <span className="help-pagination-dot" key={page} data-active={helpPage === page} />
+                ))}
               </span>
             </button>
           </div>
