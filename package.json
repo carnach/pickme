@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
     "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-react": "^5.0.0",
     "qrcode": "^1.5.4",

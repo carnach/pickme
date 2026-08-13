@@ -17,6 +17,7 @@ It is designed for quick, informal decisions: who goes first, who is on which te
 - Top-right help dot
 - PWA manifest and service worker for installable/offline use
 - Vercel-ready Vite build setup
+- Shared sessions: merge fingers from multiple phones into one pick via a 4-digit passcode
 
 ## How It Works
 
@@ -49,6 +50,32 @@ In `F` mode, PickMe shuffles the active fingers and chooses the configured numbe
 
 In `G` mode, PickMe shuffles the active fingers and distributes them across the configured number of groups in round-robin order. Group selection is limited to 2 to 5 groups so each group can have at least two fingers when 10 fingers are active. This keeps group sizes as even as possible while still being random.
 
+## Shared Sessions
+
+PickMe can merge fingers from several phones into a single pick, for when a group isn't all touching the same screen.
+
+From the help screen's "Play together" page:
+
+- **Start a session** to become the host. You're given a 4-digit passcode and an icon that identifies you to everyone else.
+- **Join a session** by entering someone else's passcode.
+
+Once connected, every phone's active fingers count toward the same shared pool and countdown. Each device still shows its own real fingers as numbered rings; fingers on other phones show up as a small pulsing icon badge (live only while that person is actually touching), and the result screen shows a ring for your own winning fingers alongside icon chips for anyone else who was picked.
+
+One device is always the host and is the authority for the countdown and the pick — this avoids two phones ever disagreeing about the outcome. If the host leaves mid-session, the session ends for everyone and each phone reverts to picking locally.
+
+This feature is powered by [Supabase Realtime](https://supabase.com/docs/guides/realtime) (Presence), connected to directly from the browser — there's no backend server in this repo. To enable it:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the project's **Settings → API**, copy the **Project URL** and the **publishable key** (the client-safe key — not the secret key).
+3. For local development, create a `.env` file in the project root (copy `.env.example`) and fill in:
+   ```bash
+   VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=<your-publishable-key>
+   ```
+4. For production, add the same two variables as **Environment Variables** in the Vercel project settings. Vite inlines them at build time, so they must be set before the app is built/deployed.
+
+If these variables aren't set, the app runs normally in local-only mode and the "Play together" page reports that shared sessions aren't configured.
+
 ## Touch Limitations
 
 PickMe supports selecting up to 10 fingers, but the real limit depends on the phone and browser. Many devices support around 5 to 10 simultaneous touch points.
@@ -62,6 +89,7 @@ PickMe supports selecting up to 10 fingers, but the real limit depends on the ph
 - Web App Manifest
 - Service Worker
 - Vercel static deployment
+- Supabase Realtime (shared sessions)
 
 ## Getting Started
 
