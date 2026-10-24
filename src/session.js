@@ -12,6 +12,12 @@ const HOST_WAIT_MS = 3000;
 const HOST_PROBE_MS = 800;
 const MAX_PASSCODE_ATTEMPTS = 5;
 const IDLE_ROUND_STATE = { status: 'idle', mode: 'F', winnerCount: 1, startedAt: null, result: null };
+// Supabase enforces a per-client presence rate limit that's easy to trip
+// with normal multi-touch usage (a couple of quick taps is enough) — each
+// trip force-closes the channel until it rejoins, dropping any touch that
+// happened in that gap. Throttling track() calls keeps us under the limit
+// instead of just recovering after the fact.
+const TRACK_MIN_INTERVAL_MS = 500;
 
 let client = null;
 
@@ -101,20 +107,25 @@ export function useSession() {
   const localFingerIdsRef = useRef([]);
   const roundStateRef = useRef(null);
   const joinTimeoutRef = useRef(null);
+  const lastTrackAtRef = useRef(0);
+  const pendingTrackRef = useRef(null);
+  const trackThrottleTimeoutRef = useRef(null);
 
   useEffect(() => {
     roleRef.current = role;
   }, [role]);
-
-  const handleConnectionStatus = useCallback((subStatus) => {
-    setReconnecting(subStatus !== 'SUBSCRIBED');
-  }, []);
 
   const teardownChannel = useCallback(() => {
     if (joinTimeoutRef.current) {
       window.clearTimeout(joinTimeoutRef.current);
       joinTimeoutRef.current = null;
     }
+    if (trackThrottleTimeoutRef.current) {
+      window.clearTimeout(trackThrottleTimeoutRef.current);
+      trackThrottleTimeoutRef.current = null;
+    }
+    pendingTrackRef.current = null;
+    lastTrackAtRef.current = 0;
     const supabase = getSupabaseClient();
     if (channelRef.current && supabase) {
       supabase.removeChannel(channelRef.current);
@@ -137,15 +148,54 @@ export function useSession() {
   const trackSelf = useCallback((overrides = {}) => {
     const channel = channelRef.current;
     if (!channel) return;
-    channel.track({
+
+    const payload = {
       deviceKey,
       icon,
       role: roleRef.current,
       fingerIds: localFingerIdsRef.current,
       roundState: roleRef.current === 'host' ? roundStateRef.current : null,
       ...overrides,
-    });
+    };
+
+    const now = Date.now();
+    const elapsed = now - lastTrackAtRef.current;
+
+    if (elapsed >= TRACK_MIN_INTERVAL_MS) {
+      lastTrackAtRef.current = now;
+      pendingTrackRef.current = null;
+      channel.track(payload);
+      return;
+    }
+
+    // Coalesce bursts (e.g. several fingers changing within one gesture)
+    // into a single trailing update carrying the freshest payload, instead
+    // of sending one track() per change and risking the rate limit.
+    pendingTrackRef.current = payload;
+    if (!trackThrottleTimeoutRef.current) {
+      trackThrottleTimeoutRef.current = window.setTimeout(() => {
+        trackThrottleTimeoutRef.current = null;
+        const pending = pendingTrackRef.current;
+        pendingTrackRef.current = null;
+        lastTrackAtRef.current = Date.now();
+        channelRef.current?.track(pending);
+      }, TRACK_MIN_INTERVAL_MS - elapsed);
+    }
   }, [deviceKey, icon]);
+
+  const handleConnectionStatus = useCallback((subStatus, channel) => {
+    setReconnecting(subStatus !== 'SUBSCRIBED');
+    // Presence lives on the realtime connection itself — a dropped socket
+    // that reconnects rejoins the channel but does not automatically resend
+    // our last-known presence payload, so we'd silently vanish from other
+    // participants' view until something else happened to trigger a fresh
+    // track() call (mobile screen locks / backgrounding drop connections
+    // often). Re-announce ourselves the moment this channel — the one
+    // actually in use, not an abandoned collision probe — comes back up.
+    if (subStatus === 'SUBSCRIBED' && channelRef.current === channel) {
+      trackSelf();
+    }
+  }, [trackSelf]);
 
   const attachPresenceHandlers = useCallback((channel, { onHostSeen, onHostLeft } = {}) => {
     // Presence diffs represent a metadata *update* (e.g. our own finger-touch
@@ -210,7 +260,7 @@ export function useSession() {
           }
         });
         channel.subscribe((subStatus) => {
-          handleConnectionStatus(subStatus);
+          handleConnectionStatus(subStatus, channel);
           if (subStatus === 'SUBSCRIBED') {
             window.setTimeout(() => {
               if (!settled) {
@@ -281,7 +331,7 @@ export function useSession() {
     });
 
     channel.subscribe((subStatus) => {
-      handleConnectionStatus(subStatus);
+      handleConnectionStatus(subStatus, channel);
       if (subStatus !== 'SUBSCRIBED') return;
       joinTimeoutRef.current = window.setTimeout(() => {
         if (!hostSeenRef.current) {
@@ -308,7 +358,7 @@ export function useSession() {
     attachPresenceHandlers(channel, {});
 
     channel.subscribe((subStatus) => {
-      handleConnectionStatus(subStatus);
+      handleConnectionStatus(subStatus, channel);
       if (subStatus === 'SUBSCRIBED') {
         setRole('host');
         setPasscode(code);
